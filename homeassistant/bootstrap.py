@@ -553,6 +553,15 @@ async def _async_set_up_integrations(
             ).values()
             if isinstance(int_or_exc, loader.Integration)
         ]
+
+        for integration in integrations_to_process:
+            for integration_in_config in config:
+                if "exclude" in config[integration_in_config]:
+                    for ignored_integration in config[integration_in_config]["exclude"]:
+                        if ignored_integration == integration.domain:
+                            integrations_to_process.remove(integration)
+                            break
+
         resolve_dependencies_tasks = [
             itg.resolve_dependencies()
             for itg in integrations_to_process
