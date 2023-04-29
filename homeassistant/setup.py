@@ -151,7 +151,7 @@ async def _async_process_dependencies(
         )
 
     failed = [
-        domain for idx, domain in enumerate(dependencies_tasks) if not results[idx]
+        domain for idx, domain in enumerate(dependencies_tasks) if not results[idx] and not _is_excluded_by_config(domain, config)
     ]
 
     if failed:
@@ -163,6 +163,12 @@ async def _async_process_dependencies(
 
     return failed
 
+
+def _is_excluded_by_config(name, config) -> bool:
+    for itg in config:
+        if "exclude" in config[itg]:
+            if name in config[itg]["exclude"]:
+                return True
 
 async def _async_setup_component(
     hass: core.HomeAssistant, domain: str, config: ConfigType
@@ -188,6 +194,10 @@ async def _async_setup_component(
         integration = await loader.async_get_integration(hass, domain)
     except loader.IntegrationNotFound:
         log_error("Integration not found.")
+        return False
+
+    if _is_excluded_by_config(integration.domain, config):
+        _LOGGER.warn(f"Dependency is excluded - {integration.domain}")
         return False
 
     if integration.disabled:
